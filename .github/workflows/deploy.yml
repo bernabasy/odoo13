@@ -1,0 +1,29 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main  # Or your deployment branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H your.vps.ip >> ~/.ssh/known_hosts
+
+    - name: Deploy Code to VPS
+      run: |
+        ssh youruser@your.vps.ip "
+          cd /opt/odoo13 &&
+          git pull origin main &&
+          ./restart.sh  # Your restart script for Odoo
+        "
