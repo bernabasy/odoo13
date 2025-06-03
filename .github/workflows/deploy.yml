@@ -1,29 +1,35 @@
-name: Deploy to VPS
+name: Deploy Odoo Modules
 
 on:
   push:
     branches:
-      - main  # Or your deployment branch
+      - main  # Trigger on push to main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v2
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H your.vps.ip >> ~/.ssh/known_hosts
+      # Set up SSH
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
-    - name: Deploy Code to VPS
-      run: |
-        ssh youruser@your.vps.ip "
-          cd /opt/odoo13 &&
-          git pull origin main &&
-          ./restart.sh  # Your restart script for Odoo
-        "
+      # Copy updated modules to VPS
+      - name: Deploy modules to VPS
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ \
+            devbf@<VPS_IP>:/home/devbf/own/
+      
+      # Restart Odoo service
+      - name: Restart Odoo service
+        run: |
+          ssh -o StrictHostKeyChecking=no devbf@<VPS_IP> \
+            "sudo service odoo13 restart"
